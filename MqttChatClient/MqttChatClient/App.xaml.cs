@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using System.Collections.ObjectModel;
 using Xamarin.Forms;
 using Xamarin.Forms.Xaml;
 using System.Threading.Tasks;
@@ -8,6 +10,11 @@ using System.Net;
 using System.Collections.Generic;
 using System.Text;
 using System.Linq;
+using MqttChatClient.Models;
+using System.Net.Security;
+using System.Security;
+using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
 
 [assembly: XamlCompilation(XamlCompilationOptions.Compile)]
 namespace MqttChatClient
@@ -16,19 +23,40 @@ namespace MqttChatClient
     {
         #region CONST
 
-        public const string ONLINE = "Online";
+        private const string BROKER_HOST_NAME = "ACA";
 
         #endregion CONST
 
-        List<Friend> FriendList = new List<Friend>() { new Friend() { Name = "Friend1"}, new Friend() { Name = "Friend2" }, new Friend() { Name = "Friend3" } };
+        #region Fields
+
+        private static DataBase _appDataBase;
+
+        #endregion Fields
 
         #region Properties
 
         private MqttClient mqttClient;
 
-        public MainPage mainPage;
+        public string PhoneNumber { get; set; }
 
-        public List<MessagingPage> MessagingPages = new List<MessagingPage>();
+        public IEnumerable<PhoneContact> Contacts { get; set; }
+
+        public static X509Certificate Cert { get; set; }
+
+        public static DataBase AppDataBase
+        {
+            get
+            {
+                if (_appDataBase == null)
+                    _appDataBase = new DataBase(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "MqttChatSQLite.db3"));
+                return _appDataBase;
+            }
+        }
+
+        public static App Instance
+        {
+            get { return Current as App; }
+        }
 
         #endregion Properties
 
@@ -37,16 +65,19 @@ namespace MqttChatClient
         public App()
         {
             InitializeComponent();
-            InitializeMQTTClient();
-            mainPage = new MainPage();
-            mainPage.CreateFriendList(FriendList);
-            MainPage = new NavigationPage(mainPage);
+            Contacts = new List<PhoneContact>();
+            PhoneNumber = string.Empty;
+            MainPage = new NavigationPage(new HomePage())
+            {
+                BarTextColor = Color.Azure,
+                BarBackgroundColor = Color.FromHex("#17445e")
+            };
         }
 
         #endregion Constructors
 
         protected override void OnStart()
-        {    // Handle when your app starts
+        {
         }
 
         protected override void OnSleep()
@@ -59,121 +90,84 @@ namespace MqttChatClient
             // Handle when your app resumes
         }
 
+        #region Methods
 
-        public static App Instance
+        public void InitializeWorkingResources()
         {
-            get { return Current as App; }
+            ReadContactsAndPhoneNumber();
+            Resource r = new Resource();
+            Cert = new X509Certificate(Resource.ca);
+
+            InitializeMQTTClient();
+            if (mqttClient.IsConnected && !string.IsNullOrEmpty(PhoneNumber))
+            {
+                MessagingCenter.Send(this, "resourcesInitialized");
+            }
         }
+
+        private void ReadContactsAndPhoneNumber()
+        {
+            Contacts = DependencyService.Get<IContactService>().GetAllContacts();
+            PhoneNumber = DependencyService.Get<IContactService>().GetCurrentPhoneNumber();
+         }
 
         private void InitializeMQTTClient()
         {
-            mqttClient = new MqttClient("192.168.100.193");
-            string clientId = "Alex";
-            // will parameters
-            string userOnlineTopic = string.Format("{0}/Online", clientId);
+            mqttClient = new MqttClient(BROKER_HOST_NAME, MqttSettings.MQTT_BROKER_DEFAULT_SSL_PORT, true, Cert, null, MqttSslProtocols.TLSv1_2, MyRemoteCertificateValidationCallback);
 
-            mqttClient.Connect(clientId, null, null, true, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true, userOnlineTopic, "false", false, 1000);
+            mqttClient.Connect(PhoneNumber, null, null, false, 2000);
 
-            //subscribe to topics
             if (mqttClient.IsConnected)
             {
-                List<string> friendUserTopics = FriendList.Select(f => f.Name + "/Alex/#").ToList();
-                List<string> friendOnlineTopics = FriendList.Select(f => f.Name + "/Online").ToList();
-                string[] topics = friendUserTopics.Concat(friendOnlineTopics).ToArray();
-                byte[] qosLevels = Enumerable.Repeat(MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, topics.Length).ToArray();
-                mqttClient.Subscribe(topics, qosLevels);
-
-                byte[] userOnlineData = Encoding.UTF8.GetBytes("true");
-                mqttClient.Publish(userOnlineTopic, userOnlineData, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
+                string topic = string.Format("{0}/#", PhoneNumber);
+                mqttClient.Subscribe(new string[] { topic}, new byte[] { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
             }
 
-            mqttClient.MqttMsgPublishReceived += client_MqttMsgPublishReceived;
+            mqttClient.MqttMsgPublishReceived += ClientMqttMsgPublishReceived;
         }
 
-        public void client_MqttMsgPublishReceived(object sender, MqttMsgPublishEventArgs e)
+        public void ClientMqttMsgPublishReceived(object sender, MqttMsgPublishEventArgs e)
         {
             string receivedMessage = Encoding.Default.GetString(e.Message);
             string[] topicLevels = e.Topic.Split('/');
 
-            if (topicLevels.Length == 1)
-                return;
-
-            Friend messagingFriend = FriendList.Find(f => f.Name.Equals(topicLevels[0]));
-            if (messagingFriend == null)
-                return;
-
-            MessagingPage messagingPage = MessagingPages.Find(page => page.MessageFriend.Name.Equals(topicLevels[0]));
-            if (messagingPage == null)
+            if (topicLevels.Length == 2)
             {
-                messagingPage = new MessagingPage(messagingFriend);
-                MessagingPages.Add(messagingPage);
+                string messageSender = topicLevels[1];
+                Message message = new Message()
+                {
+                    Text = receivedMessage,
+                    Sender = messageSender,
+                    Receiver = PhoneNumber,
+                    CreatedTime = DateTime.Now,
+                    Status = MessageStatus.NotRead
+                };
+                AppDataBase.SaveItemAsync(message);
+                MessagingCenter.Send(this, "newMessageReceived", message);
             }
-            Device.BeginInvokeOnMainThread(() =>
+        }
+
+        public void PublishNewMessageAsync(Message message)
+        {
+            string topic = string.Format("{0}/{1}", message.Receiver, PhoneNumber);
+            byte[] data = Encoding.UTF8.GetBytes(message.Text);
+            if (mqttClient.IsConnected)
             {
-                try
-                {
-                    if (topicLevels[1].Equals(ONLINE))
-                    {
-                        messagingPage.MessageFriend.Status = receivedMessage.Equals("true") ? "online" : "offline";
-                        mainPage.ChangeFriendsStatus(messagingPage.MessageFriend); 
-                    }
-                    else if (topicLevels[2].Equals("Message"))
-                    {
-                        mainPage.ChangeFriendsNameColor(messagingFriend, true);
-                        messagingPage.DisplayNewMessage(receivedMessage);
-                    }
-                    else if (topicLevels[2].Equals("AreFriends"))
-                    {
-                        bool areFriends = receivedMessage.Equals("true") ? true : false;
-                        if (!areFriends)
-                        {
-                            mainPage.RemoveFriend(messagingFriend);
-                            UnsubscribeFromFriend(messagingFriend);        
-                        }
-
-                    }
-                }
-                catch (Exception)
-                {
-                  //  DisplayAlert("error", ex.Message, "ok");
-                }
-            });
+                mqttClient.Publish(topic, data, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, false);
+                AppDataBase.SaveItemAsync(message);
+            }
         }
 
-        public void RemoveFriend(Friend friend)
+        private static bool MyRemoteCertificateValidationCallback(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
-            PublishNewMessage(friend, "AreFriends", "false", true);
-            UnsubscribeFromFriend(friend);
-            mainPage.RemoveFriend(friend);
-            // remove from messaging pages
+            if (sslPolicyErrors == SslPolicyErrors.None)
+                return true;
+            else if (certificate.Issuer.Equals(Cert.Issuer)) // WORKAROUND APPLIED BECAUSE CHAINSTATUS IS NOT IMPLEMENTED
+                return true;
+            else
+                return false;
         }
 
-        public void PublishNewMessage(Friend friend, string topicPart, string message, bool retain)
-        {
-            string topic = FriendUserThreeLevelTopic(friend, topicPart);
-            byte[] data = Encoding.UTF8.GetBytes(message);
-            mqttClient.Publish(topic, data, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, retain);
-        }
-
-        private string FriendUserTwoLevelTopic(Friend friend)
-        {
-            string result = string.Format("{0}/{1}", mqttClient.ClientId, friend.Name);
-            return result;
-        }
-
-        private string FriendUserThreeLevelTopic(Friend friend, string thirdLevel)
-        {
-            string twoLevel = FriendUserTwoLevelTopic(friend);
-            string result = string.IsNullOrEmpty(thirdLevel) ? twoLevel : twoLevel + "/" + thirdLevel;
-            return result;
-        }
-
-        private void UnsubscribeFromFriend(Friend friend)
-        {
-            string onlineTopic = string.Format("{0}/Online", friend.Name);
-            string friendTopics = string.Format("{0}/#", friend.Name);
-            mqttClient.Unsubscribe(new string[] { friendTopics });
-            FriendList.Remove(friend);
-        }
+        #endregion Methods
     }
 }

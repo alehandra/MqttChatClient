@@ -34,6 +34,8 @@ namespace MqttChatClient.Droid
                     {
                         try
                         {
+                            // consider putting country code
+                            // number should to be in +.. format
                             string name = phonesCursor.GetString(phonesCursor.GetColumnIndex(ContactsContract.Contacts.InterfaceConsts.DisplayName));
                             string phoneNumber = phonesCursor.GetString(phonesCursor.GetColumnIndex(ContactsContract.CommonDataKinds.Phone.Number));
                             string imageUri = phonesCursor.GetString(phonesCursor.GetColumnIndex(ContactsContract.Contacts.InterfaceConsts.PhotoUri));
@@ -84,6 +86,8 @@ namespace MqttChatClient.Droid
             if (!string.IsNullOrEmpty(phoneNumber))
             {
                 var phoneUtil = PhoneNumberUtil.GetInstance();
+                // consider putting country code
+                // number should to be in +.. format
                 var numberProto = phoneUtil.Parse(phoneNumber, "IT");
                 string formattedPhone = phoneUtil.Format(numberProto, PhoneNumbers.PhoneNumberFormat.INTERNATIONAL);
                 phoneNumber = string.IsNullOrEmpty(formattedPhone) ? string.Empty : Regex.Replace(formattedPhone, "[+ ]", string.Empty);

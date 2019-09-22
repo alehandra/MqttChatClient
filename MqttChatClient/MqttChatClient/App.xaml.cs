@@ -103,7 +103,7 @@ namespace MqttChatClient
                 {
                     // SEND SOME CODE TO THE PHONENUMBER, TO CHECK THE VALIDITY AND SECURITY
                     PhoneNumber = closedArgs.Text;
-                    PhoneNumber = DependencyService.Get<IContactService>().GetCurrentPhoneNumberCorrectFormat(PhoneNumber);
+                    PhoneNumber = DependencyService.Get<IContactService>().GetCurrentPhoneNumberCorrectFormat(PhoneNumber).Trim();
                     InitializeMQTTClient();
                     if (mqttClient.IsConnected && !string.IsNullOrEmpty(PhoneNumber))
                     {

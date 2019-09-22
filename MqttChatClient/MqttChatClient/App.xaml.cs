@@ -94,28 +94,31 @@ namespace MqttChatClient
 
         public void InitializeWorkingResources()
         {
-            ReadContactsAndPhoneNumber();
             Resource r = new Resource();
             Cert = new X509Certificate(Resource.ca);
-
-            InitializeMQTTClient();
-            if (mqttClient.IsConnected && !string.IsNullOrEmpty(PhoneNumber))
-            {
-                MessagingCenter.Send(this, "resourcesInitialized");
-            }
-        }
-
-        private void ReadContactsAndPhoneNumber()
-        {
             Contacts = DependencyService.Get<IContactService>().GetAllContacts();
-            PhoneNumber = DependencyService.Get<IContactService>().GetCurrentPhoneNumber();
-         }
+            var popup = new PopupEntry("Enter phone number", string.Empty, "OK", "Cancel");
+            popup.PopupClosed += (o, closedArgs) => {
+                if (closedArgs.Button == "OK")
+                {
+                    // SEND SOME CODE TO THE PHONENUMBER, TO CHECK THE VALIDITY AND SECURITY
+                    PhoneNumber = closedArgs.Text;
+                    PhoneNumber = DependencyService.Get<IContactService>().GetCurrentPhoneNumberCorrectFormat(PhoneNumber);
+                    InitializeMQTTClient();
+                    if (mqttClient.IsConnected && !string.IsNullOrEmpty(PhoneNumber))
+                    {
+                        MessagingCenter.Send(this, "resourcesInitialized");
+                    }
+                }
+            };
+            popup.Show();
+        }
 
         private void InitializeMQTTClient()
         {
             mqttClient = new MqttClient(BROKER_HOST_NAME, MqttSettings.MQTT_BROKER_DEFAULT_SSL_PORT, true, Cert, null, MqttSslProtocols.TLSv1_2, MyRemoteCertificateValidationCallback);
-
-            mqttClient.Connect(PhoneNumber, null, null, false, 2000);
+            
+            mqttClient.Connect(PhoneNumber);
 
             if (mqttClient.IsConnected)
             {

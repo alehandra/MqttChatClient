@@ -14,11 +14,12 @@ using Android;
 
 namespace MqttChatClient.Droid
 {
-    [Activity(Label = "MqttChatClient", Icon = "@mipmap/icon", Theme = "@style/MainTheme", MainLauncher = true, ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation)]
+    [Activity(Label = "MqttChatClient", Icon = "@drawable/icon", Theme = "@style/MainTheme", MainLauncher = true, ConfigurationChanges = ConfigChanges.ScreenSize | ConfigChanges.Orientation)]
     public class MainActivity : global::Xamarin.Forms.Platform.Android.FormsAppCompatActivity
     {
 
         private const int READ_CONTACTS = 1000;
+        public static MainActivity ThisActivity { get; private set; }
 
         protected override void OnCreate(Bundle savedInstanceState)
         {
@@ -27,7 +28,7 @@ namespace MqttChatClient.Droid
 
             base.OnCreate(savedInstanceState);
             global::Xamarin.Forms.Forms.Init(this, savedInstanceState);
-
+            ThisActivity = this;
             LoadApplication(new App());
         }
 

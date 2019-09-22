@@ -87,7 +87,6 @@ namespace MqttChatClient.ViewModels
                     };
 
                     MessageList.Add(me);
-                    App.AppDataBase.SaveItemAsync(message);
                     RefreshScrollDown();
                 }
             });

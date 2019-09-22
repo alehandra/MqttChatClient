@@ -8,6 +8,8 @@ namespace MqttChatClient
     {
         IEnumerable<PhoneContact> GetAllContacts();
 
-        string GetCurrentPhoneNumber();
+        string GetCurrentPhoneNumberCorrectFormat(string phoneNumber);
+
+        void ShowPopUpForCurrentPhoneNumber(PopupEntry pe);
     }
 }

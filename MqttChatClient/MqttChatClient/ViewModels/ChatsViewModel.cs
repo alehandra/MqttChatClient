@@ -153,20 +153,25 @@ namespace MqttChatClient.ViewModels
             
             foreach (Message m in latestMessages)
             {
-                string contactNumber = m.Receiver.Equals(App.Instance.PhoneNumber) ? m.Sender : m.Receiver;
-
-                if (ContactList.Any(c => c.PhoneNumber.Equals(contactNumber)))
-                    continue;
-
-                IEnumerable<PhoneContact> l = App.Instance.Contacts.Where(c => c.PhoneNumber.Equals(contactNumber));
-                PhoneContact contact = l?.Count() > 0 ? l.First() : null;
-                if (contact != null)
+                string currrentUser = App.Instance.PhoneNumber;
+                if (m.Receiver.Equals(currrentUser) || m.Sender.Equals(currrentUser))
                 {
-                    PhoneContactWrapper pe = new PhoneContactWrapper(contact)
+                    string contactNumber = m.Receiver.Equals(App.Instance.PhoneNumber) ? m.Sender : m.Receiver;
+
+                    if (ContactList.Any(c => c.PhoneNumber.Equals(contactNumber)))
+                        continue;
+
+                    IEnumerable<PhoneContact> l = App.Instance.Contacts.Where(c => c.PhoneNumber.Equals(contactNumber));
+                    PhoneContact contact = l?.Count() > 0 ? l.First() : null;
+                    if (contact != null)
                     {
-                        HasUnreadMessages = m.Status == MessageStatus.NotRead
-                    };
-                    ContactList.Add(pe);
+                        PhoneContactWrapper pe = new PhoneContactWrapper(contact)
+                        {
+                            HasUnreadMessages = m.Status == MessageStatus.NotRead
+                        };
+                        ContactList.Add(pe);
+                    }
+
                 }
             }
             SearchContactList = ContactList;

@@ -60,7 +60,9 @@ namespace MqttChatClient.Droid
                                 contact.ImageSource = ImageSource.FromStream(() => new MemoryStream(imageBytes));
 
                             }
-                            phoneContacts.Add(contact);
+                            var list = phoneContacts.Where(c => c.PhoneNumber.Equals(phoneNumber));
+                            if (list == null || list.Count() == 0)
+                                phoneContacts.Add(contact);
                         }
                         catch (Exception)
                         {
@@ -74,10 +76,11 @@ namespace MqttChatClient.Droid
             return phoneContacts;
         }
 
-       public string GetCurrentPhoneNumber()
+       public string GetCurrentPhoneNumberCorrectFormat(string phoneNumber)
         {
-            TelephonyManager mgr = Application.Context.GetSystemService(Context.TelephonyService) as TelephonyManager;
-            string phoneNumber = mgr.Line1Number;
+            // Logic with TelephonyManager doesnt always work
+            //TelephonyManager mgr = Application.Context.GetSystemService(Context.TelephonyService) as TelephonyManager;
+            //string phoneNumber = mgr.Line1Number;
             if (!string.IsNullOrEmpty(phoneNumber))
             {
                 var phoneUtil = PhoneNumberUtil.GetInstance();
@@ -86,6 +89,36 @@ namespace MqttChatClient.Droid
                 phoneNumber = string.IsNullOrEmpty(formattedPhone) ? string.Empty : Regex.Replace(formattedPhone, "[+ ]", string.Empty);
             }
             return phoneNumber;
+        }
+
+       public void ShowPopUpForCurrentPhoneNumber(PopupEntry pe)
+        {
+            var alert = new AlertDialog.Builder(MainActivity.ThisActivity);
+
+            var edit = new EditText(MainActivity.ThisActivity) { Text = pe.Text };
+            edit.InputType = Android.Text.InputTypes.ClassPhone;
+            alert.SetView(edit);
+
+            alert.SetTitle(pe.Title);
+
+            alert.SetPositiveButton("OK", (senderAlert, args) =>
+            {
+                pe.OnPopupClosed(new PopupEntryClosedArgs
+                {
+                    Button = "OK",
+                    Text = edit.Text
+                });
+            });
+
+            alert.SetNegativeButton("Cancel", (senderAlert, args) =>
+            {
+                pe.OnPopupClosed(new PopupEntryClosedArgs
+                {
+                    Button = "Cancel",
+                    Text = edit.Text
+                });
+            });
+            alert.Show();
         }
 
        public static byte[] ReadFully(Stream input)

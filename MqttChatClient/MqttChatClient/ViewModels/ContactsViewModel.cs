@@ -86,6 +86,7 @@ namespace MqttChatClient
                 SearchContactList = ContactList;
             });
         }
-            #endregion Methods
+        
+        #endregion Methods
         }
 }

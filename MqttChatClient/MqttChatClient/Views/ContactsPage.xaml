@@ -7,7 +7,8 @@
              >
     <ContentPage.Content BackgroundColor="#17445e">
         <StackLayout x:Name="stackPanel" VerticalOptions="FillAndExpand" Spacing="5" BackgroundColor="#17445e" Margin="5, 5">
-            <SearchBar TextColor="#17445e" Text="{Binding SearchString}" CancelButtonColor="#17445e" Placeholder="Search" PlaceholderColor="#14547a" BackgroundColor="White" Margin="3, 3" />
+            <ActivityIndicator HeightRequest="100" Color="Azure" IsVisible="{Binding IsBusy}" IsRunning="{Binding IsBusy}"></ActivityIndicator>
+            <SearchBar IsVisible="{Binding ElementsVisible}" TextColor="#17445e" Text="{Binding SearchString}" CancelButtonColor="#17445e" Placeholder="Search" PlaceholderColor="#14547a" BackgroundColor="White" Margin="3, 3" />
             <ListView x:Name="listView" ItemsSource="{Binding SearchContactList}" BackgroundColor="#17445e" SeparatorColor="Silver" HasUnevenRows="true" ItemTapped="OpenContactMessagePage" Margin="3, 3" >
                 <ListView.ItemTemplate>
                     <DataTemplate>

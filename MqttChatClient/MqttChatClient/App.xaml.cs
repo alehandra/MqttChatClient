@@ -58,6 +58,8 @@ namespace MqttChatClient
             get { return Current as App; }
         }
 
+        public bool ShouldSubscribe { get; set; }
+
         #endregion Properties
 
         #region Constructors
@@ -67,11 +69,15 @@ namespace MqttChatClient
             InitializeComponent();
             Contacts = new List<PhoneContact>();
             PhoneNumber = string.Empty;
-            MainPage = new NavigationPage(new HomePage())
+            //Current.Properties["IsLoggedIn"] = false;
+            
+            MainPage = new NavigationPage(new LoginPage())
             {
                 BarTextColor = Color.Azure,
                 BarBackgroundColor = Color.FromHex("#17445e")
             };
+             // Client should subscribe only once when registering
+             ShouldSubscribe = true;
         }
 
         #endregion Constructors
@@ -92,41 +98,43 @@ namespace MqttChatClient
 
         #region Methods
 
+        public void ProceedWithLogin(string phoneNumber, INavigation navigation)
+        {
+            navigation.PushAsync(new HomePage());
+            PhoneNumber = phoneNumber;
+        }
+
         public void InitializeWorkingResources()
         {
             Resource r = new Resource();
             Cert = new X509Certificate(Resource.ca);
             Contacts = DependencyService.Get<IContactService>().GetAllContacts();
-            var popup = new PopupEntry("Enter phone number", string.Empty, "OK", "Cancel");
-            popup.PopupClosed += (o, closedArgs) => {
-                if (closedArgs.Button == "OK")
-                {
-                    // SEND SOME CODE TO THE PHONENUMBER, TO CHECK THE VALIDITY AND SECURITY
-                    PhoneNumber = closedArgs.Text;
-                    PhoneNumber = DependencyService.Get<IContactService>().GetCurrentPhoneNumberCorrectFormat(PhoneNumber).Trim();
-                    InitializeMQTTClient();
-                    if (mqttClient.IsConnected && !string.IsNullOrEmpty(PhoneNumber))
-                    {
-                        MessagingCenter.Send(this, "resourcesInitialized");
-                    }
-                }
-            };
-            popup.Show();
+            PhoneNumber = DependencyService.Get<IContactService>().GetCurrentPhoneNumberCorrectFormat(PhoneNumber).Trim();
+
+            InitializeMQTTClient();
+            if (mqttClient.IsConnected && !string.IsNullOrEmpty(PhoneNumber))
+            {
+                MessagingCenter.Send(this, "resourcesInitialized");
+            }
         }
 
         private void InitializeMQTTClient()
         {
             mqttClient = new MqttClient(BROKER_HOST_NAME, MqttSettings.MQTT_BROKER_DEFAULT_SSL_PORT, true, Cert, null, MqttSslProtocols.TLSv1_2, MyRemoteCertificateValidationCallback);
-            
-            mqttClient.Connect(PhoneNumber);
+
+            // SEND LOGIN DATA -> USER NAME AND PASSWORD
+            mqttClient.Connect(PhoneNumber, null, null, false, 2000);
 
             if (mqttClient.IsConnected)
             {
-                string topic = string.Format("{0}/#", PhoneNumber);
-                mqttClient.Subscribe(new string[] { topic}, new byte[] { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
-            }
+                mqttClient.MqttMsgPublishReceived += ClientMqttMsgPublishReceived;
 
-            mqttClient.MqttMsgPublishReceived += ClientMqttMsgPublishReceived;
+                if (ShouldSubscribe)
+                {
+                    string topic = string.Format("{0}/#", PhoneNumber);
+                    mqttClient.Subscribe(new string[] { topic }, new byte[] { MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE });
+                }
+            }
         }
 
         public void ClientMqttMsgPublishReceived(object sender, MqttMsgPublishEventArgs e)
@@ -156,7 +164,7 @@ namespace MqttChatClient
             byte[] data = Encoding.UTF8.GetBytes(message.Text);
             if (mqttClient.IsConnected)
             {
-                mqttClient.Publish(topic, data, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, false);
+                mqttClient.Publish(topic, data, MqttMsgBase.QOS_LEVEL_EXACTLY_ONCE, true);
                 AppDataBase.SaveItemAsync(message);
             }
         }

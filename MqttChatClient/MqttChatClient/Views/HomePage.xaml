@@ -5,6 +5,7 @@
              x:Class="MqttChatClient.HomePage"
             Title="MQChat"
             BackgroundColor="Azure"
-            SelectedTabColor="WhiteSmoke">
-  <!--Pages can be added as references or inline-->
+            SelectedTabColor="WhiteSmoke"
+            NavigationPage.HasBackButton="False">
+    <!--Pages can be added as references or inline-->
 </TabbedPage>

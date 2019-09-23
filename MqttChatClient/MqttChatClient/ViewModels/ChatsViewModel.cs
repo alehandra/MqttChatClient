@@ -17,6 +17,8 @@ namespace MqttChatClient.ViewModels
         private ObservableCollection<PhoneContactWrapper> _contactList;
         private IEnumerable<PhoneContactWrapper> _searchContactList;
         private string _searchString;
+        private bool _isBusy = true;
+        private bool _elementsVisible;
 
         #endregion Fields
 
@@ -62,6 +64,31 @@ namespace MqttChatClient.ViewModels
             }
         }
 
+        public bool IsBusy
+        {
+            get
+            {
+                return _isBusy;
+            }
+            set
+            {
+                _isBusy = value;
+                RaisePropertyChanged("IsBusy");
+            }
+        }
+
+        public bool ElementsVisible
+        {
+            get
+            {
+                return _elementsVisible;
+            }
+            set
+            {
+                _elementsVisible = value;
+                RaisePropertyChanged("ElementsVisible");
+            }
+        }
 
         #endregion Properties
 
@@ -108,7 +135,14 @@ namespace MqttChatClient.ViewModels
                     else
                     {
                         // this number is not in the contactlist
-                        // add logic for this..
+                        PhoneContactWrapper pce = new PhoneContactWrapper()
+                        {
+                            FirstName = message.Sender,
+                            PhoneNumber = message.Sender,
+                            HasUnreadMessages = true,
+                        };
+                        ContactList.Insert(0, pce);
+      
                     }
                 }
             });
@@ -171,10 +205,22 @@ namespace MqttChatClient.ViewModels
                         };
                         ContactList.Add(pe);
                     }
+                    else
+                    {
+                        PhoneContactWrapper pe = new PhoneContactWrapper()
+                        {
+                            PhoneNumber = contactNumber,
+                            FirstName = contactNumber,
+                            HasUnreadMessages = m.Status == MessageStatus.NotRead
+                        };
+                        ContactList.Add(pe);
+                    }
 
                 }
             }
             SearchContactList = ContactList;
+            IsBusy = false;
+            ElementsVisible = true;
         }
 
         #endregion Methods

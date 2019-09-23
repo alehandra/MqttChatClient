@@ -14,6 +14,7 @@
     </ContentPage.Resources>
     <ContentPage.Content BackgroundColor="Azure">
         <StackLayout BackgroundColor="Azure">
+            <Label BackgroundColor="Transparent" TextColor="#17445e" IsVisible="{Binding NumberIsNotInTheContactList}"></Label>
             <ListView x:Name="MessageListView" ItemsSource="{Binding MessageList}" BackgroundColor="Azure" SeparatorColor="Azure">
                 <ListView.ItemTemplate>
                     <DataTemplate>

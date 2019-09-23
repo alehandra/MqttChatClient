@@ -5,6 +5,7 @@ using System.Text;
 using Xamarin.Forms;
 using MqttChatClient.Models;
 using System.Windows.Input;
+using System.Linq;
 
 namespace MqttChatClient.ViewModels
 {
@@ -14,6 +15,7 @@ namespace MqttChatClient.ViewModels
 
         private ObservableCollection<MessageWrapper> _messageList;
         private string _messageEntry;
+        private bool _numberIsNotInTheContactList;
 
         #endregion Fields
 
@@ -52,6 +54,19 @@ namespace MqttChatClient.ViewModels
 
         public Action RefreshScrollDown;
 
+        public bool NumberIsNotInTheContactList
+        {
+            get
+            {
+                return _numberIsNotInTheContactList;
+            }
+            set
+            {
+                _numberIsNotInTheContactList = value;
+                RaisePropertyChanged("NumberIsNotInTheContactList");
+            }
+        }
+
         #endregion Properties
 
         #region Constructors
@@ -60,6 +75,7 @@ namespace MqttChatClient.ViewModels
         {
             Contact = contact;
             SendMessageCommand = new Command(SendMessage);
+            NumberIsNotInTheContactList = !App.Instance.Contacts.Any(c => c.PhoneNumber.Equals(contact.PhoneNumber));
             MessageList = new ObservableCollection<MessageWrapper>();
             ManageMessagingCenter();
             ReadMessages();

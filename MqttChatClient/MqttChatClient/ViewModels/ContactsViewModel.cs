@@ -17,6 +17,8 @@ namespace MqttChatClient
         private ObservableCollection<PhoneContact> _contactList;
         private IEnumerable<PhoneContact> _searchContactList;
         private string _searchString;
+        private bool _isBusy;
+        private bool _elementsVisible;
 
         #endregion Fields
 
@@ -62,6 +64,32 @@ namespace MqttChatClient
             }
         }
 
+        public bool IsBusy
+        {
+            get
+            {
+                return _isBusy;
+            }
+            set
+            {
+                _isBusy = value;
+                RaisePropertyChanged("IsBusy");
+            }
+        }
+
+        public bool ElementsVisible
+        {
+            get
+            {
+                return _elementsVisible;
+            }
+            set
+            {
+                _elementsVisible = value;
+                RaisePropertyChanged("ElementsVisible");
+            }
+        }
+
         #endregion Properties
 
         #region Constructor
@@ -84,6 +112,8 @@ namespace MqttChatClient
             {
                 ContactList =  new ObservableCollection<PhoneContact>(App.Instance.Contacts);
                 SearchContactList = ContactList;
+                IsBusy = false;
+                ElementsVisible = true;
             });
         }
         

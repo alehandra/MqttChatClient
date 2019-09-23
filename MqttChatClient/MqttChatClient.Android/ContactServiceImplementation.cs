@@ -95,36 +95,6 @@ namespace MqttChatClient.Droid
             return phoneNumber;
         }
 
-       public void ShowPopUpForCurrentPhoneNumber(PopupEntry pe)
-        {
-            var alert = new AlertDialog.Builder(MainActivity.ThisActivity);
-
-            var edit = new EditText(MainActivity.ThisActivity) { Text = pe.Text };
-            edit.InputType = Android.Text.InputTypes.ClassPhone;
-            alert.SetView(edit);
-
-            alert.SetTitle(pe.Title);
-
-            alert.SetPositiveButton("OK", (senderAlert, args) =>
-            {
-                pe.OnPopupClosed(new PopupEntryClosedArgs
-                {
-                    Button = "OK",
-                    Text = edit.Text
-                });
-            });
-
-            alert.SetNegativeButton("Cancel", (senderAlert, args) =>
-            {
-                pe.OnPopupClosed(new PopupEntryClosedArgs
-                {
-                    Button = "Cancel",
-                    Text = edit.Text
-                });
-            });
-            alert.Show();
-        }
-
        public static byte[] ReadFully(Stream input)
         {
             byte[] buffer = new byte[16 * 1024];

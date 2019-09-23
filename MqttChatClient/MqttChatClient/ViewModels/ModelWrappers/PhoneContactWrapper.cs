@@ -30,6 +30,8 @@ namespace MqttChatClient.Models
         #endregion Properties
 
         #region Constructors
+        public PhoneContactWrapper()
+        { }
 
         public PhoneContactWrapper(PhoneContact pc)
         {

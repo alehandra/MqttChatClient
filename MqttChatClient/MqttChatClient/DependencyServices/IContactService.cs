@@ -9,7 +9,5 @@ namespace MqttChatClient
         IEnumerable<PhoneContact> GetAllContacts();
 
         string GetCurrentPhoneNumberCorrectFormat(string phoneNumber);
-
-        void ShowPopUpForCurrentPhoneNumber(PopupEntry pe);
     }
 }

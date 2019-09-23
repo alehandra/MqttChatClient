@@ -40,10 +40,6 @@ namespace MqttChatClient.Droid
             {
                 ActivityCompat.RequestPermissions(this, new String[] { Manifest.Permission.ReadContacts }, READ_CONTACTS);
             }
-            else
-            {
-                App.Instance.InitializeWorkingResources();
-            }
         }
 
         public override void OnRequestPermissionsResult(int requestCode, string[] permissions, [GeneratedEnum] Permission[] grantResults)
@@ -54,7 +50,6 @@ namespace MqttChatClient.Droid
                 case READ_CONTACTS:
                     if (grantResults.Length > 0 && grantResults[0] == Permission.Granted)
                     {
-                        App.Instance.InitializeWorkingResources();
                     }
                     else
                     {
